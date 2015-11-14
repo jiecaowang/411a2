@@ -89,9 +89,9 @@ def TrainNN(num_hiddens, eps, momentum, num_epochs):
     train_error_false_classified_percent.append(train_false_classified_percent)
     valid_error_false_classified_percent.append(valid_false_classified_percent)
     
-    # sys.stdout.write('\rStep %d Train CE %.5f Validation CE %.5f' % (epoch, train_CE, valid_CE))
-    sys.stdout.write('\rStep %d Train Classification error Percent(CEP) %.5f Validation CEP %.5f' % (epoch, train_false_classified_percent, valid_false_classified_percent))
-    sys.stdout.flush()
+    if (epoch % 100 == 0):
+      sys.stdout.write('\rStep %d Train CE %.5f Validation CE %.5f Train CEP %.5f Validation CEP %.5f' % (epoch, train_CE, valid_CE, train_false_classified_percent, valid_false_classified_percent))
+      sys.stdout.flush()
     if (epoch % 100 == 0):
       sys.stdout.write('\n')
 
@@ -127,24 +127,26 @@ def findFalsePredictedPercent(target, prediction):
   return float(np.sum(np.round(np.absolute(target - prediction))))/np.size(target)
 
 
-def DisplayErrorPlot(train_error, valid_error):
+def DisplayErrorPlot(train_error, valid_error, learningRate, momentum):
   plt.figure(1)
   plt.clf()
   plt.plot(range(len(train_error)), train_error, 'b', label='Train')
   plt.plot(range(len(valid_error)), valid_error, 'g', label='Validation')
   plt.xlabel('Epochs')
   plt.ylabel('Cross entropy')
+  plt.title('learning rate: ' + str(learningRate) + ' momentum: ' + str(momentum))
   plt.legend()
   plt.draw()
-  raw_input('Press Enter to exit.')
+  # raw_input('Press Enter to exit.')
 
-def DisplayClassificationErrorPlot(train_error, valid_error):
-  plt.figure(1)
+def DisplayClassificationErrorPlot(train_error, valid_error, learningRate, momentum):
+  plt.figure(2)
   plt.clf()
   plt.plot(range(len(train_error)), train_error, 'b', label='Train')
   plt.plot(range(len(valid_error)), valid_error, 'g', label='Validation')
   plt.xlabel('Epochs')
   plt.ylabel('Classification Error Percent')
+  plt.title('learning rate: ' + str(learningRate) + ' momentum: ' + str(momentum))
   plt.legend()
   plt.draw()
   raw_input('Press Enter to exit.')
@@ -163,12 +165,12 @@ def LoadModel(modelfile):
 
 def main():
   num_hiddens = 10
-  eps = 0.1
+  eps = 0.01
   momentum = 0.0
   num_epochs = 1000
   W1, W2, b1, b2, train_error, valid_error, train_error_false_classified_percent, valid_error_false_classified_percent = TrainNN(num_hiddens, eps, momentum, num_epochs)
-  # DisplayErrorPlot(train_error, valid_error) 
-  DisplayClassificationErrorPlot(train_error_false_classified_percent, valid_error_false_classified_percent)
+  DisplayErrorPlot(train_error, valid_error, eps, momentum)
+  DisplayClassificationErrorPlot(train_error_false_classified_percent, valid_error_false_classified_percent, eps, momentum)
   # If you wish to save the model for future use :
   # outputfile = 'model.npz'
   # SaveModel(outputfile, W1, W2, b1, b2, train_error, valid_error)
