@@ -37,6 +37,11 @@ def TrainNN(num_hiddens, eps, momentum, num_epochs):
   db2 = np.zeros(b2.shape)
   train_error = []
   valid_error = []
+
+  # false classified error
+  train_error_false_classified_number = []
+  valid_error_false_classified_number = []
+
   num_train_cases = inputs_train.shape[1]
   for epoch in xrange(num_epochs):
     # Forward prop
@@ -47,6 +52,8 @@ def TrainNN(num_hiddens, eps, momentum, num_epochs):
 
     # Compute cross entropy
     train_CE = -np.mean(target_train * np.log(prediction) + (1 - target_train) * np.log(1 - prediction))
+      # train false classified error
+    train_false_classified_number = findFalsePredictedNumber(target_train, prediction)
 
     # Compute deriv
     dEbydlogit = prediction - target_train
@@ -73,10 +80,17 @@ def TrainNN(num_hiddens, eps, momentum, num_epochs):
     b2 = b2 + db2
 
     valid_CE = Evaluate(inputs_valid, target_valid, W1, W2, b1, b2)
+      # false classified error
+    valid_false_classified_number = EvaluateClassificationError(inputs_valid, target_valid, W1, W2, b1, b2)
 
     train_error.append(train_CE)
     valid_error.append(valid_CE)
-    sys.stdout.write('\rStep %d Train CE %.5f Validation CE %.5f' % (epoch, train_CE, valid_CE))
+    # classification error number
+    train_error_false_classified_number.append(train_false_classified_number)
+    valid_error_false_classified_number.append(valid_false_classified_number)
+    
+    # sys.stdout.write('\rStep %d Train CE %.5f Validation CE %.5f' % (epoch, train_CE, valid_CE))
+    sys.stdout.write('\rStep %d Train classification error number(CEN) %.5f Validation CEN %.5f' % (epoch, train_false_classified_number, valid_false_classified_number))
     sys.stdout.flush()
     if (epoch % 100 == 0):
       sys.stdout.write('\n')
@@ -85,8 +99,12 @@ def TrainNN(num_hiddens, eps, momentum, num_epochs):
   final_train_error = Evaluate(inputs_train, target_train, W1, W2, b1, b2)
   final_valid_error = Evaluate(inputs_valid, target_valid, W1, W2, b1, b2)
   final_test_error = Evaluate(inputs_test, target_test, W1, W2, b1, b2)
-  print 'Error: Train %.5f Validation %.5f Test %.5f' % (final_train_error, final_valid_error, final_test_error)
-  return W1, W2, b1, b2, train_error, valid_error
+  print 'CE Error: Train %.5f Validation %.5f Test %.5f' % (final_train_error, final_valid_error, final_test_error)
+  final_train_error_CEN = EvaluateClassificationError(inputs_train, target_train, W1, W2, b1, b2)
+  final_valid_error_CEN = EvaluateClassificationError(inputs_valid, target_valid, W1, W2, b1, b2)
+  final_test_error_CEN = EvaluateClassificationError(inputs_test, target_test, W1, W2, b1, b2)
+  print 'Classification Error Number: Train %.5f Validation %.5f Test %.5f' % (final_train_error_CEN, final_valid_error_CEN, final_test_error_CEN)
+  return W1, W2, b1, b2, train_error, valid_error, train_error_false_classified_number, valid_error_false_classified_number
 
 def Evaluate(inputs, target, W1, W2, b1, b2):
   """Evaluates the model on inputs and target."""
@@ -97,6 +115,18 @@ def Evaluate(inputs, target, W1, W2, b1, b2):
   CE = -np.mean(target * np.log(prediction) + (1 - target) * np.log(1 - prediction))
   return CE
 
+def EvaluateClassificationError(inputs, target, W1, W2, b1, b2):
+  """Evaluates the model on inputs and target."""
+  h_input = np.dot(W1.T, inputs) + b1  # Input to hidden layer.
+  h_output = 1 / (1 + np.exp(-h_input))  # Output of hidden layer.
+  logit = np.dot(W2.T, h_output) + b2  # Input to output layer.
+  prediction = 1 / (1 + np.exp(-logit))  # Output prediction.
+  return findFalsePredictedNumber(target, prediction)
+
+def findFalsePredictedNumber(target, prediction):
+  return np.sum(np.round(np.absolute(target - prediction)))
+
+
 def DisplayErrorPlot(train_error, valid_error):
   plt.figure(1)
   plt.clf()
@@ -104,6 +134,17 @@ def DisplayErrorPlot(train_error, valid_error):
   plt.plot(range(len(valid_error)), valid_error, 'g', label='Validation')
   plt.xlabel('Epochs')
   plt.ylabel('Cross entropy')
+  plt.legend()
+  plt.draw()
+  raw_input('Press Enter to exit.')
+
+def DisplayClassificationErrorPlot(train_error, valid_error):
+  plt.figure(1)
+  plt.clf()
+  plt.plot(range(len(train_error)), train_error, 'b', label='Train')
+  plt.plot(range(len(valid_error)), valid_error, 'g', label='Validation')
+  plt.xlabel('Epochs')
+  plt.ylabel('Classification Error Number')
   plt.legend()
   plt.draw()
   raw_input('Press Enter to exit.')
@@ -125,8 +166,9 @@ def main():
   eps = 0.1
   momentum = 0.0
   num_epochs = 1000
-  W1, W2, b1, b2, train_error, valid_error = TrainNN(num_hiddens, eps, momentum, num_epochs)
-  DisplayErrorPlot(train_error, valid_error) 
+  W1, W2, b1, b2, train_error, valid_error, train_error_false_classified_number, valid_error_false_classified_number = TrainNN(num_hiddens, eps, momentum, num_epochs)
+  # DisplayErrorPlot(train_error, valid_error) 
+  DisplayClassificationErrorPlot(train_error_false_classified_number, valid_error_false_classified_number)
   # If you wish to save the model for future use :
   # outputfile = 'model.npz'
   # SaveModel(outputfile, W1, W2, b1, b2, train_error, valid_error)
