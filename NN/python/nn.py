@@ -104,7 +104,8 @@ def TrainNN(num_hiddens, eps, momentum, num_epochs):
   final_valid_error_CEP = EvaluateClassificationErrorPercent(inputs_valid, target_valid, W1, W2, b1, b2)
   final_test_error_CEP = EvaluateClassificationErrorPercent(inputs_test, target_test, W1, W2, b1, b2)
   print 'Classification Error Percent: Train %.5f Validation %.5f Test %.5f' % (final_train_error_CEP, final_valid_error_CEP, final_test_error_CEP)
-  print 'learing rate: %.5f, momentum: %.5f' % (eps, momentum)
+  print 'learing rate: %.5f, momentum: %.5f, epoch: %f' % (eps, momentum, num_epochs)
+  print 'W1 abs sum: %.10f     W1 abs mean: %.5f     W2 abs sum: %.10f     W2 abs mean: %.5f' % (np.sum(np.absolute(W1)), np.mean(np.absolute(W1)), np.sum(np.absolute(W2)), np.mean(np.absolute(W2)))
   return W1, W2, b1, b2, train_error, valid_error, train_error_false_classified_percent, valid_error_false_classified_percent
 
 def Evaluate(inputs, target, W1, W2, b1, b2):
@@ -166,12 +167,14 @@ def LoadModel(modelfile):
 
 def main():
   num_hiddens = 10
-  eps = 0.5
-  momentum = 0.9
-  num_epochs = 1000
+  eps = 0.01
+  momentum = 0.5
+  num_epochs = 3000
   W1, W2, b1, b2, train_error, valid_error, train_error_false_classified_percent, valid_error_false_classified_percent = TrainNN(num_hiddens, eps, momentum, num_epochs)
+
   DisplayErrorPlot(train_error, valid_error, eps, momentum)
   DisplayClassificationErrorPlot(train_error_false_classified_percent, valid_error_false_classified_percent, eps, momentum)
+
   # If you wish to save the model for future use :
   # outputfile = 'model.npz'
   # SaveModel(outputfile, W1, W2, b1, b2, train_error, valid_error)
