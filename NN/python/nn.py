@@ -168,8 +168,8 @@ def LoadModel(modelfile):
 def main():
   num_hiddens = 10
   eps = 0.01
-  momentum = 0.5
-  num_epochs = 3000
+  momentum = 0
+  num_epochs = 5000
   W1, W2, b1, b2, train_error, valid_error, train_error_false_classified_percent, valid_error_false_classified_percent = TrainNN(num_hiddens, eps, momentum, num_epochs)
 
   DisplayErrorPlot(train_error, valid_error, eps, momentum)
