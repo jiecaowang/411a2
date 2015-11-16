@@ -85,7 +85,7 @@ def mogEM(x, K, iters, minVary=0, randConst=1):
   print 'Random const: %.10f ' % (randConst)
   return p, mu, vary, logProbX
 
-def mogEMInitByKmeans(x, K, iters, minVary=0, randConst=1):
+def mogEMInitByKmeans(x, K, iters, minVary=0, plotAndPrint=True, randConst=1):
   """
   Fits a Mixture of K Gaussians on x.
   Inputs:
@@ -140,16 +140,17 @@ def mogEMInitByKmeans(x, K, iters, minVary=0, randConst=1):
     logProb = np.log(Px) + mx
     logProbX[i] = np.sum(logProb)
 
-    print 'Iter %d logProb %.5f' % (i, logProbX[i])
+    if (plotAndPrint):
+      print 'Iter %d logProb %.5f' % (i, logProbX[i])
 
-    # Plot log prob of data
-    plt.figure(1);
-    plt.clf()
-    plt.plot(np.arange(i), logProbX[:i], 'r-')
-    plt.title('Log-probability of data versus # iterations of EM')
-    plt.xlabel('Iterations of EM')
-    plt.ylabel('log P(D)');
-    plt.draw()
+      # Plot log prob of data
+      plt.figure(1);
+      plt.clf()
+      plt.plot(np.arange(i), logProbX[:i], 'r-')
+      plt.title('Log-probability of data versus # iterations of EM')
+      plt.xlabel('Iterations of EM')
+      plt.ylabel('log P(D)');
+      plt.draw()
 
     respTot = np.mean(PcGivenx, axis=1).reshape(-1, 1)
     respX = np.zeros((N, K))
@@ -164,7 +165,8 @@ def mogEMInitByKmeans(x, K, iters, minVary=0, randConst=1):
     vary = respDist / respTot.T
     vary = (vary >= minVary) * vary + (vary < minVary) * minVary
   
-  print 'Random const: %.10f ' % (randConst)
+  if (plotAndPrint):
+    print 'Random const: %.10f ' % (randConst)
   return p, mu, vary, logProbX
 
 def mogLogProb(p, mu, vary, x):
@@ -221,16 +223,6 @@ def q2Show():
   ShowMeans(mu)
   ShowMeans(vary)
 
-def showMultiMeans(means):
-  """Show the cluster centers as images."""
-  for i in xrange(means.shape[1]):
-    plt.figure(i)
-    plt.clf()
-    plt.subplot(1, means.shape[1], i+1)
-    plt.imshow(means[:, i].reshape(16, 16).T, cmap=plt.cm.gray)
-    plt.draw()
-    raw_input('Press Enter.')
-
 def q3():
   iters = 10
   minVary = 0.01
@@ -248,21 +240,24 @@ def q3():
   # ShowMeans(vary)
 
 def calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, newInputX):
-  probX2 = np.exp(logProbX2)
-  probX3 = np.exp(logProbX3)
-  probXGiven2 = np.exp(mogLogProb(p2, mu2, vary2, newInputX))
-  probXGiven3 = np.exp(mogLogProb(p3, mu3, vary3, newInputX))
-  probX = probX2 * probXGiven2 + probX3 * probXGiven3
-  prob2GivenX = (probX2 * probXGiven2)/probX
-  prob3GivenX = (probX3 * probXGiven3)/probX
+  logProbXGiven2 = mogLogProb(p2, mu2, vary2, newInputX)
+  logProbXGiven3 = mogLogProb(p3, mu3, vary3, newInputX)
+
+  logProbXAnd2 = logProbX2 + logProbXGiven2
+  logProbXAnd3 = logProbX3 + logProbXGiven3
+
+  logProb2GivenX = 1/(1 + logProbXAnd3 - logProbXAnd2)
+  logProb3GivenX = 1/(1 + logProbXAnd2 - logProbXAnd3)
+
+  prob2GivenX = np.exp(logProb2GivenX)
+  prob3GivenX = np.exp(logProb3GivenX)
   return prob2GivenX, prob3GivenX, findPrediction(prob2GivenX, prob3GivenX)
 
 def findPrediction(prob2GivenX, prob3GivenX):
-  diff = prob2GivenX - prob3GivenX
-  return np.floor(diff + 1) # 0 is 2, 1 means 2, 50vs50 is 3 as well
+  return 1.0 - (prob2GivenX > prob3GivenX)
 
 def findFalsePredictedPercent(target, predictionByInt):
-  return float(np.sum(np.absolute(target - predictionByInt)))/np.size(target)
+  return np.sum((target != predictionByInt) + 0.0)/float(np.size(target))
 
 def DisplayClassificationErrorPlot(numComponents, train_error, valid_error, test_error):
   plt.figure(1)
@@ -293,28 +288,24 @@ def q4():
     K = numComponents[t]
     # Train a MoG model with K components for digit 2
     #-------------------- Add your code here --------------------------------
-    p2, mu2, vary2, logProbX2 = mogEMInitByKmeans(train2, K, iters, minVary)
+    p2, mu2, vary2, logProbX2 = mogEMInitByKmeans(train2, K, iters, minVary, False)
     
     # Train a MoG model with K components for digit 3
     #-------------------- Add your code here --------------------------------
-    p3, mu3, vary3, logProbX3 = mogEMInitByKmeans(train3, K, iters, minVary)
+    p3, mu3, vary3, logProbX3 = mogEMInitByKmeans(train3, K, iters, minVary, False)
     
     # Caculate the probability P(d=1|x) and P(d=2|x),
     # classify examples, and compute error rate
     # Hints: you may want to use mogLogProb function
     #-------------------- Add your code here --------------------------------
-    # prob2GivenValid2, prob3GivenValid2, predictValid2 = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, valid2)
-    # prob2GivenValid3, prob3GivenValid3, predictValid3 = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, valid3)
-
-    # prob2GivenTest2, prob3GivenTest2, predictTest2 = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, test2)
-    # prob2GivenTest3, prob3GivenTest3, predictTest3 = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, test3)
-    
-    prob2GivenValid, prob3GivenValid, predictTrain = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, inputs_train)
+    prob2GivenTrain, prob3GivenTrain, predictTrain = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, inputs_train)
     prob2GivenValid, prob3GivenValid, predictValid = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, inputs_valid)
     prob2GivenTest, prob3GivenTest, predictTest = calculatePdGivenX(p2, mu2, vary2, logProbX2, p3, mu3, vary3, logProbX3, inputs_test)
+
     errorTrain[t] = findFalsePredictedPercent(target_train, predictTrain)
     errorValidation[t] = findFalsePredictedPercent(target_valid, predictValid)
     errorTest[t] = findFalsePredictedPercent(target_test, predictTest)
+    print "err train: %.5f, err valid: %.5f, err test: %.5f, components: %d" % (errorTrain[t], errorValidation[t], errorTest[t], K)
 
     
   # Plot the error rate
